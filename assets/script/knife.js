@@ -54,7 +54,6 @@ cc.Class({
             }
             
         }
-        // cc.log(this.node.width,this.node.height);
         
     },
 });

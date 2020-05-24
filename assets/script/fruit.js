@@ -80,9 +80,7 @@ cc.Class({
         this.isBroken = false;
 
         this.isActivate = true;
-        // this.isAvailable =  true;
-
-        // this.game_manager = null;
+        
     },
 
     set_properties(fruit_type,fruit_all,fruit_apart_1,fruit_apart_2,fruit_all_per_roate_angle,position_x,position_y,fruit_all_x_speed,fruit_all_y_speed){
@@ -111,19 +109,16 @@ cc.Class({
                 if(Math.random() < 0.9)
                 {
                     let bf = this.game_manager.getPooledBoomFlame(this.game_manager.gid++,0.2 + 0.5 * Math.random(),[this.fruit_all.x + this.game_manager.node_w/2 - this.game_manager.boom.width/2+3,this.fruit_all.y + this.game_manager.node_h/2 + this.game_manager.boom.height/2-3],Math.PI * 2 * Math.random(),60,this.game_manager.global_timer,cc.instantiate(this.game_manager.paint));
-                    // cc.log("add");
                     
                     this.game_manager.node.addChild(bf.paint);
                 }
-                    // this.boom_flame.push(new BoomFlame(this.gid++,200 + 500 * Math.random(),[13,300],Math.PI * 2 * Math.random(),60,cc.instantiate(this.paint)));
-    
+                    
                 for (var i in this.game_manager.pooled_boom_flame){
     
-                    // cc.log(this.pooled_boom_flame[i])
                     if(this.game_manager.pooled_boom_flame[i].active == false){
                         
                         this.game_manager.pooled_boom_flame[i].elapse = this.game_manager.global_timer - this.game_manager.pooled_boom_flame[i].create_time;
-                        // if(this.boom_flame[i].elapse % 20 == 0)
+                        
                         this.game_manager.pooled_boom_flame[i].update_boom_flame(this.game_manager.drawLine.bind(this.game_manager));
                     
                     }
@@ -162,15 +157,13 @@ cc.Class({
             
             this.fruit_all.parent.removeChild(this.fruit_all);
             this.fruit_all = null;
-            // this.game_manager.node.removeChild(this.fruit_all);
-
-           
+            
             this.fruit_apart_1.runAction(cc.rotateBy(1,this.fruit_apart_roate_angle));
             this.fruit_apart_2.runAction(cc.rotateBy(1,-this.fruit_apart_roate_angle));
             
             this.game_manager.node.addChild(this.fruit_apart_1);
             this.game_manager.node.addChild(this.fruit_apart_2);
-            cc.log("apart - this.fruit_apart1.parent ",this.fruit_apart_1.parent);
+           
         }
         
         
@@ -199,7 +192,7 @@ cc.Class({
                 this.fruit_apart_y_speed += this.fruit_apart_y_acc;
                 this.fruit_apart_2.y -= this.fruit_apart_y_speed;
             }
-            // cc.log('ddd');
+            
             
         }
         

@@ -15,9 +15,11 @@ cc.Class({
 
     properties: {
 
+        // 这两个参数可用于手机适配
         origin_bk_w: 640,
         origin_bk_h: 480,
 
+        // 界面静态节点
         home_mask:{
             default: null,
             type: cc.Node
@@ -51,7 +53,7 @@ cc.Class({
             default: null,
             type: cc.Node
         },
-        sandia: {
+        sandia: {   
             default: null,
             type: cc.Node
         },
@@ -64,23 +66,27 @@ cc.Class({
             default: null,
             type: cc.Node
         },
+
+        // 刀光及对象池相关
         knife_part: {
             default: null,
             type: cc.Prefab
         },
-       
         pooled_knifves: [],
         num_pooled_knifves: 10,
         knife_width: 10,
         knife_height: 10,
 
+        // 界面相关元素的旋转速度
         _rotation: 0.7,
 
+        // 触摸事件坐标
         sx:null,
         sy:null,
         ex:null,
         ey:null,
 
+        // 水果及对象池
         pooled_fruits: [],
         num_pooled_fruits: 10,
 
@@ -150,32 +156,37 @@ cc.Class({
             type: cc.Prefab
         },
 
+        // 切开水果时的刀光
         flash_prefab:{
             default: null,
             type: cc.Prefab
         },
 
+        // 这两个可用于多点触控问题，判断是否同一事件
         last_event_id: null,
         new_event_id: null,
 
+        // 进入游戏时所需要的节点组（得分label、xxx等）
         game_start_need: [cc.Node],
 
         game_score: 0 ,
         fruit_missed: 0,
 
-        //
+        // 带有Graphics组件的预制体，作为画笔
         paint:{
             default: null,
             type: cc.Prefab
         },
         
+        // 炸弹头部火星特效相关
         gid: 0,
-
         pooled_boom_flame: [],
         num_pooled_boom_flame: 20,
 
+        // 世界时间
         global_timer: 0,
 
+        // 炸弹爆炸时特效相关
         boom_is_broken: false,
         blank_opacity: 255,
 
@@ -223,17 +234,12 @@ cc.Class({
 
         // this.boom_frame = [];
         
-
     },
     
+    // 这个函数实际仅用来画两条贝塞尔曲线，用来模拟炸弹火星效果。可以进一步扩展其它画线。
     drawLine(g,start_point,end_point,control_point_1,control_point_2){
-        // cc.log(this.abc);
-        // var g = this.abc.getComponent(cc.Graphics);
-        g.moveTo(start_point[0],start_point[1]);
         
-        // M541,353Q525,350,516,336Q532,339,541,353
-        // g.quadraticCurveTo(525,350,516,336);
-        // g.quadraticCurveTo(532,339,541,353);
+        g.moveTo(start_point[0],start_point[1]);
         
         g.quadraticCurveTo(control_point_1[0],control_point_1[1],end_point[0],end_point[1]);
         g.quadraticCurveTo(control_point_2[0],control_point_2[1],start_point[0],start_point[1]);
@@ -245,60 +251,52 @@ cc.Class({
 
     onLoad () {
         
-        cc.log(this.home_mask);
-        
         this.initConfig();
 
+        // 初始化对象池 以及 开始界面上的炸弹火星特效
         for(let i=0;i<this.num_pooled_boom_flame;i++){
             this.pooled_boom_flame.push(new BoomFlame());
         }
 
         this.boom_flame_schedule = function(){
-
             if(Math.random() < 0.9)
             {
                 let bf = this.getPooledBoomFlame(this.gid++,0.2 + 0.5 * Math.random(),[this.boom.x + this.node_w/2 - this.boom.width/2+3,this.boom.y + this.node_h/2 + this.boom.height/2-3],Math.PI * 2 * Math.random(),60,this.global_timer,cc.instantiate(this.paint));
-                // cc.log("add");
-                
                 this.node.addChild(bf.paint);
             }
-                // this.boom_flame.push(new BoomFlame(this.gid++,200 + 500 * Math.random(),[13,300],Math.PI * 2 * Math.random(),60,cc.instantiate(this.paint)));
-
+                
             for (var i in this.pooled_boom_flame){
 
-                // cc.log(this.pooled_boom_flame[i])
                 if(this.pooled_boom_flame[i].active == false){
-                    
                     this.pooled_boom_flame[i].elapse = this.global_timer - this.pooled_boom_flame[i].create_time;
-                    // if(this.boom_flame[i].elapse % 20 == 0)
-                    this.pooled_boom_flame[i].update_boom_flame(this.drawLine.bind(this));
-                
+                    this.pooled_boom_flame[i].update_boom_flame(this.drawLine.bind(this));         
                 }
             }
         }
 
-        
         this.schedule(this.boom_flame_schedule, 0.04);
 
+        // 将其它节点隐藏（得分label、xxx等）
         this.game_start_need.forEach(e => {
             e.active = false;
         })
 
         this.sandia = null;
         this.peach = null;
-        cc.log(this.node.position)
-        cc.log(cc.view.getCanvasSize().height);
         this.home_mask.x = -this.node.x;
         this.home_mask.y = this.node.y;
+
+        // 初始化刀光、水果对象池
         for(let i=0;i<this.num_pooled_knifves;i++){
             this.pooled_knifves.push(cc.instantiate(this.knife_part));
         }
         for(let i=0;i<this.num_pooled_fruits;i++){
             this.pooled_fruits.push(this.createFruit("none"));
         }
+
+        // 开启碰撞组件、设置监听事件
         cc.director.getCollisionManager().enabled = true;
         // cc.director.getCollisionManager().enabledDebugDraw = true;
-
         this.node.on(cc.Node.EventType.TOUCH_START, this.onTouchStart, this, true);
         this.node.on(cc.Node.EventType.TOUCH_MOVE, this.onTouchMove, this, true);
         this.node_h = this.node.height;
@@ -308,17 +306,17 @@ cc.Class({
         this.knife_height = this.pooled_knifves[0].getComponent('knife').height;
         this.knife_width = this.pooled_knifves[0].getComponent('knife').width;
 
+        // 开始界面上的那两个水果
         this.sandia = this.createFruit("sandia",null,null,0.8,0,0);
         this.sandia.fruit_all_y_acc = 0;
         
         this.peach = this.createFruit("peach",null,null,-0.8,0,0);
         this.peach.fruit_all_y_acc = 0;
 
-        
- 
     },
 
     start () {
+        // 开始audio
         this.menu_audio_id = cc.audioEngine.play(this.menu_audio,false);
     },
 
@@ -332,6 +330,7 @@ cc.Class({
     
         this._rotation++;
 
+        // 维护对象池
         this.pooled_knifves.forEach(e => {   
             if(!e.getComponent('knife').isActivate && e.getComponent('knife').life <= 0){
                 this.node.removeChild(e);
@@ -345,7 +344,6 @@ cc.Class({
                 this.sandia.update(dt);
             }
             else{
-                
                 this.sandia.fruit_destroy();
                 this.sandia = null;
             }
@@ -361,6 +359,7 @@ cc.Class({
             }
         }
         
+        // 判断水果是否还在界面内，是否被切开，是否漏掉了。
         this.pooled_fruits.forEach(e => {
             if(!e.isAvailable){
                 // cc.log('11')
@@ -372,16 +371,14 @@ cc.Class({
                             this.fruit_missed++;
                             this.precess_fruit_missed();
                         }
-
                     }
                     e.fruit_destroy();
                     e.isAvailable = true;
                 }
             }
         });
-
-        // cc.log(this.node);
         
+        // 当切到炸弹时的特效
         if(this.boom_is_broken && this.blank_paint && this.blank_opacity>0){
             var g = this.blank_paint.getComponent(cc.Graphics);
             g.clear();
@@ -391,8 +388,8 @@ cc.Class({
 
     },
 
-    getPooledKnife(){
-        
+    // 对象池
+    getPooledKnife(){ 
         for(let i=0; i<this.num_pooled_knifves; i++){
             if(this.pooled_knifves[i].getComponent('knife').isActivate){
                 // cc.log(i,"is activate");
@@ -408,6 +405,7 @@ cc.Class({
         return new_knife;
     },
 
+    // 相关事件
     onTouchStart(event){
         
         if(!this.last_event_id)
@@ -426,14 +424,17 @@ cc.Class({
 
     onTouchMove(event){
         
+        // 这一段可以用来处理移动设备上的多点触控问题
         // if(this.new_event_id != event.getID()){
         //     // this.last_event_id = this.new_event_id;
         //     return;
         // }
+
         this.curent_pos = event.getLocation();
         this.ex = event.getLocationX();
         this.ey = event.getLocationY();
         
+        // 刀光以及相关audio
         let lenV = this.curent_pos.sub(this.prev_pos).mag(); 
         let roateV = 0;
         let falsh_angle = this.curent_pos.sub(this.prev_pos).signAngle(cc.v2(1,0)) / Math.PI * 180;
@@ -441,7 +442,6 @@ cc.Class({
         if(lenV > this.knife_height){
             let tempVec = cc.v2(0,10)
             roateV = this.curent_pos.sub(this.prev_pos).signAngle(tempVec) / Math.PI * 180
-
             // 
             let end_pooledKnife = this.getPooledKnife();
             if(end_pooledKnife != null){
@@ -458,10 +458,10 @@ cc.Class({
 
             if(!this.throw_audio_id || this.throw_audio_id && cc.audioEngine.getState(this.throw_audio_id)!=1)
                 this.throw_audio_id = cc.audioEngine.playEffect(this.throw_audio,false);
-            cc.log(this.throw_audio_id)
-            cc.log(cc.audioEngine.getState(this.throw_audio_id))
+            
         }
         
+        // 开始界面的水果被切开
         if (this.sandia && this.sandia.fruit_all!=null && cc.Intersection.pointInPolygon(this.curent_pos, this.sandia.fruit_all.getComponent('cc.PolygonCollider').world.points)) {
             // console.log("Hit!");
             cc.audioEngine.playEffect(this.splatter_audio,false);
@@ -498,6 +498,11 @@ cc.Class({
 
         }
 
+        if(this.boom && cc.Intersection.polygonCircle([this.curent_pos], this.boom.getComponent('cc.CircleCollider').world)){
+            cc.game.end();
+        }
+
+        // 对水果和炸弹被切开时的处理
         this.pooled_fruits.forEach(e => {
             if(e && !e.isAvailable
                 && e.fruit_all!=null 
@@ -529,11 +534,9 @@ cc.Class({
                      }
         });
 
-        // cc.log(this.num_pooled_knifves);
-        
-        
     },
 
+    // 从开始界面到游戏界面
     prepare_game_start(){
         // cc.log(this.menu_audio_id)
         cc.audioEngine.stopAll();
@@ -556,6 +559,7 @@ cc.Class({
             this.game_start_need[i].active = true;
         }
 
+        // 水果的出现
         this.schedule_func = function(){
 
             let num_fruits = Math.floor(Math.random() * (3-1+1) + 1);
@@ -575,6 +579,7 @@ cc.Class({
  
     },
 
+    // 创建水果
     createFruit(fruit_type,position_x,position_y,roate_angle,x_speed,y_speed){
         let t = new Fruit();
         // t.isActivate = true;
@@ -586,6 +591,7 @@ cc.Class({
         return t;
     },
 
+    // 对象池
     getPooledFruit(is_boom){
         
         for(let i=0; i<this.num_pooled_fruits; i++){
@@ -603,7 +609,6 @@ cc.Class({
                 this.pooled_fruits[i].isAvailable = false;
                 let fruit_type = this.fruit_type[type_index];
                 let fruit_roate_angle = Math.random() > 0.5 ? 1 : -1;
-                // cc.log(this.background.width);
                 let position_x = Math.random()*((this.background.x+this.background.width/2 - 2) - (this.background.x-this.background.width/2 + 2) +1)+ (this.background.x-this.background.width/2 + 2);
                 let position_y = (this.background.y-this.node_h/2) + 0.01;
                 let x_speed = Math.random() * (1.7-0.6+1) + 0.6;
@@ -617,8 +622,7 @@ cc.Class({
                 this.pooled_fruits[i].game_manager = this;
 
                 if(fruit_type == 'boom'){
-                    
-                    
+
                 }
 
                 return this.pooled_fruits[i];
@@ -648,6 +652,7 @@ cc.Class({
 
     },
 
+    // 漏掉水果时
     precess_fruit_missed(){
         if(this.fruit_missed > 0 && this.fruit_missed <= 3){
             this.game_start_need[this.game_start_need_name.indexOf('x'+this.fruit_missed)].active = false;
@@ -675,6 +680,7 @@ cc.Class({
         }.bind(this),2500);
     },
 
+    // 对象池
     getPooledBoomFlame(id,life,center,angle,length,create_time,paint){
         for(let i=0;i<this.num_pooled_boom_flame;i++){
             if(this.pooled_boom_flame[i].active){
@@ -702,7 +708,7 @@ cc.Class({
         }
     },
 
-    //boom light
+    //boom light 用于下面的第一种方法
     createLight(x,y,every_angle,index){
         let light_len = 1074;
         let light_left_angle = Math.PI * (index * every_angle - 2.5) / 180;
@@ -775,6 +781,7 @@ cc.Class({
             }.bind(num),time+=110);
         }
 
+        // 光线结束后，整个屏幕的特效
         setTimeout(function(){
             this.node.removeChild(paint);
             paint.destroy();
@@ -785,6 +792,7 @@ cc.Class({
 
         }.bind(this),time+=100);
 
+        // 游戏结束
         setTimeout(function(){
             if(this.blank_paint){
                 this.node.removeChild(this.blank_paint);
@@ -792,8 +800,6 @@ cc.Class({
             }
             this.game_over_and_restart();
         }.bind(this),time+=3000);
-
-        
 
     }
 
@@ -880,9 +886,9 @@ function BoomFlame(id,life,center,angle,length,create_time,paint){
 
 }
 
-//boom light
+//boom light 用于上面第二种方法
 function createLight(x,y,every_angle,index,paint){
-    let light_len = 600;
+    let light_len = 1074;
     let light_left_angle = Math.PI * (index * every_angle - 2.5) / 180;
     let light_right_angle = Math.PI * (index * every_angle + 2.5) / 180;
     let light_left_x = x + light_len * Math.cos(light_left_angle);
